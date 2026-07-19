@@ -17,6 +17,7 @@ const GAP_Y = 12;
 const ROWS = 8;
 const COLS = 10;
 const COL_H = 28;
+const DRAG_THRESHOLD = 8;
 
 const ERA_NAMES = ERAS.map(e => e.name);
 
@@ -93,13 +94,13 @@ function nodeState(data: GameData, node: LegacyUpg): 'owned' | 'available' | 'bl
 
 export default function LegacyTreeModal({ data, onBuy, onClose }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, scrollX: 0, scrollY: 0 });
+  const dragRef = useRef({ dragging: false, startX: 0, startY: 0, scrollX: 0, scrollY: 0, moved: false });
 
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
+  const startDrag = useCallback((clientX: number, clientY: number) => {
     const d = dragRef.current;
     d.dragging = true;
-    d.startX = e.clientX;
-    d.startY = e.clientY;
+    d.startX = clientX;
+    d.startY = clientY;
     const el = containerRef.current;
     if (el) {
       d.scrollX = el.scrollLeft;
@@ -107,26 +108,66 @@ export default function LegacyTreeModal({ data, onBuy, onClose }: Props) {
     }
   }, []);
 
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
+  const moveDrag = useCallback((clientX: number, clientY: number) => {
     const d = dragRef.current;
-    if (!d.dragging) return;
-    e.preventDefault();
+    const dx = clientX - d.startX;
+    const dy = clientY - d.startY;
+    if (!d.dragging) {
+      if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+      d.dragging = true;
+    }
+    d.moved = true;
     const el = containerRef.current;
     if (el) {
-      el.scrollLeft = d.scrollX - (e.clientX - d.startX);
-      el.scrollTop = d.scrollY - (e.clientY - d.startY);
+      el.scrollLeft = d.scrollX - dx;
+      el.scrollTop = d.scrollY - dy;
     }
   }, []);
 
-  const onMouseUp = useCallback(() => {
+  const endDrag = useCallback(() => {
     dragRef.current.dragging = false;
+    dragRef.current.moved = false;
   }, []);
 
   useEffect(() => {
-    const onGlobalUp = () => { dragRef.current.dragging = false; };
-    window.addEventListener('mouseup', onGlobalUp);
-    return () => window.removeEventListener('mouseup', onGlobalUp);
+    const onUp = () => { dragRef.current.dragging = false; };
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchend', onUp);
+    };
   }, []);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    startDrag(e.clientX, e.clientY);
+  }, [startDrag]);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragRef.current.dragging) return;
+    e.preventDefault();
+    moveDrag(e.clientX, e.clientY);
+  }, [moveDrag]);
+
+  const onMouseUp = useCallback(() => endDrag(), [endDrag]);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      startDrag(t.clientX, t.clientY);
+    }
+  }, [startDrag]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!dragRef.current.dragging) return;
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      moveDrag(t.clientX, t.clientY);
+    }
+  }, [moveDrag]);
+
+  const onTouchEnd = useCallback(() => endDrag(), [endDrag]);
 
   const connections = getTreeConnections();
 
@@ -163,7 +204,7 @@ export default function LegacyTreeModal({ data, onBuy, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md" onClick={onClose}>
       <div
-        className="card w-[94vw] max-w-6xl max-h-[90vh] m-2 p-0 animate-fade-in flex flex-col overflow-hidden"
+        className="card w-full md:w-[94vw] md:max-w-6xl h-full md:max-h-[90vh] md:m-2 p-0 animate-fade-in flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -209,7 +250,10 @@ export default function LegacyTreeModal({ data, onBuy, onClose }: Props) {
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
-          className="relative overflow-auto flex-1 min-h-0 bg-gradient-to-br from-surface-card/20 via-surface-card/10 to-surface-card/5 cursor-grab active:cursor-grabbing select-none"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="relative overflow-auto flex-1 min-h-0 bg-gradient-to-br from-surface-card/20 via-surface-card/10 to-surface-card/5 cursor-grab active:cursor-grabbing select-none touch-none"
         >
           {/* Subtle dot grid background */}
           <div

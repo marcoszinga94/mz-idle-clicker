@@ -9,8 +9,12 @@ import UpgradesPanel from './UpgradesPanel';
 import PrestigePanel from './PrestigePanel';
 import LegacyTreeModal from './LegacyTreeModal';
 
+type Tab = 'mejoras' | 'legado';
+
 export default function App() {
   const [data, setData] = useState<GameData>(() => loadGame() || createInitialState());
+  const [showLegacyTree, setShowLegacyTree] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('mejoras');
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -31,8 +35,6 @@ export default function App() {
     window.addEventListener('beforeunload', h);
     return () => window.removeEventListener('beforeunload', h);
   }, []);
-
-  const [showLegacyTree, setShowLegacyTree] = useState(false);
 
   const act = useCallback((fn: (d: GameData) => GameData) => setData(fn), []);
 
@@ -77,11 +79,15 @@ export default function App() {
   const bgClass = bgColors[eraIdx] || bgColors[0];
 
   return (
-    <div className={`h-screen p-2 md:p-3 grid grid-rows-[auto_auto_auto_1fr] gap-2 overflow-hidden bg-gradient-to-b ${bgClass}`}>
+    <div className={`h-dvh p-1.5 md:p-3 flex flex-col gap-1.5 md:gap-2 overflow-hidden bg-gradient-to-b ${bgClass}`}>
       <ResourceBar data={data} onReset={() => { setData(resetGame()); }} />
       <EraBanner data={data} />
-      <WriterScreen data={data} onFrase={onFrase} onError={onError} />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_24rem] gap-2 min-h-0 overflow-y-auto lg:overflow-visible">
+      <div className="flex-1 min-h-0">
+        <WriterScreen data={data} onFrase={onFrase} onError={onError} />
+      </div>
+
+      {/* Desktop panels (hidden below lg) */}
+      <div className="hidden lg:grid lg:grid-cols-[1fr_24rem] gap-2 min-h-0 overflow-y-auto">
         <UpgradesPanel data={data} onBuy={onBuyUpgrade} />
         <PrestigePanel
           data={data}
@@ -89,6 +95,36 @@ export default function App() {
           onOpenLegacyTree={() => setShowLegacyTree(true)}
         />
       </div>
+
+      {/* Mobile tab bar + panel (hidden on lg+) */}
+      <div className="flex flex-col lg:hidden min-h-0">
+        <div className="flex items-stretch gap-1 mb-1.5">
+          {(['mejoras', 'legado'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+                activeTab === tab
+                  ? 'bg-accent/20 text-accent border border-accent/30'
+                  : 'bg-surface-card/50 text-text-muted border border-surface-border/30'
+              }`}
+            >
+              {tab === 'mejoras' ? '🔧 Mejoras' : '📖 Legado'}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {activeTab === 'mejoras' && <UpgradesPanel data={data} onBuy={onBuyUpgrade} />}
+          {activeTab === 'legado' && (
+            <PrestigePanel
+              data={data}
+              onPrestige={onPrestige}
+              onOpenLegacyTree={() => setShowLegacyTree(true)}
+            />
+          )}
+        </div>
+      </div>
+
       {showLegacyTree && (
         <LegacyTreeModal
           data={data}
