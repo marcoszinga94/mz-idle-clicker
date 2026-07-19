@@ -6,6 +6,7 @@ interface Props {
   data: GameData;
   onFrase: (frase: string) => void;
   onError: () => void;
+  extraClass?: string;
 }
 
 function charsMatch(a: string, b: string): boolean {
@@ -42,7 +43,7 @@ const COMPOSE: Record<string, Record<string, string>> = {
   '^': { a: 'â', e: 'ê', i: 'î', o: 'ô', u: 'û' },
 };
 
-export default function WriterScreen({ data, onFrase, onError }: Props) {
+export default function WriterScreen({ data, onFrase, onError, extraClass = '' }: Props) {
   const [input, setInput] = useState('');
   const [lastFrase, setLastFrase] = useState('');
   const [showPop, setShowPop] = useState(false);
@@ -137,7 +138,7 @@ export default function WriterScreen({ data, onFrase, onError }: Props) {
   const errores = letras.some(l => l.state === 'wrong');
 
   return (
-    <div className="card p-4 glow-blue flex flex-col gap-3">
+    <div className={`card p-4 glow-blue flex flex-col gap-3 overflow-y-auto ${extraClass}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs uppercase tracking-wider text-text-muted">
           Escribe la frase exacta

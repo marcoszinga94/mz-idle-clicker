@@ -9,12 +9,18 @@ import UpgradesPanel from './UpgradesPanel';
 import PrestigePanel from './PrestigePanel';
 import LegacyTreeModal from './LegacyTreeModal';
 
-type Tab = 'mejoras' | 'legado';
+type Tab = 'escribir' | 'mejoras' | 'legado';
+
+const TABS: { id: Tab; icon: string }[] = [
+  { id: 'escribir', icon: '✍️' },
+  { id: 'mejoras', icon: '🔧' },
+  { id: 'legado', icon: '📖' },
+];
 
 export default function App() {
   const [data, setData] = useState<GameData>(() => loadGame() || createInitialState());
   const [showLegacyTree, setShowLegacyTree] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('mejoras');
+  const [activeTab, setActiveTab] = useState<Tab>('escribir');
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -82,9 +88,7 @@ export default function App() {
     <div className={`h-dvh p-1.5 md:p-3 flex flex-col gap-1.5 md:gap-2 overflow-hidden bg-gradient-to-b ${bgClass}`}>
       <ResourceBar data={data} onReset={() => { setData(resetGame()); }} />
       <EraBanner data={data} />
-      <div className="flex-1 min-h-0">
-        <WriterScreen data={data} onFrase={onFrase} onError={onError} />
-      </div>
+      <WriterScreen data={data} onFrase={onFrase} onError={onError} extraClass="flex-1 min-h-[200px]" />
 
       {/* Desktop panels (hidden below lg) */}
       <div className="hidden lg:grid lg:grid-cols-[1fr_24rem] gap-2 min-h-0 overflow-y-auto">
@@ -96,33 +100,37 @@ export default function App() {
         />
       </div>
 
-      {/* Mobile tab bar + panel (hidden on lg+) */}
-      <div className="flex flex-col lg:hidden min-h-0">
-        <div className="flex items-stretch gap-1 mb-1.5">
-          {(['mejoras', 'legado'] as const).map(tab => (
+      {/* Mobile bottom section */}
+      <div className="lg:hidden flex flex-col gap-1.5">
+        {/* Tab bar */}
+        <div className="flex items-stretch gap-1">
+          {TABS.map(t => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
               className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
-                activeTab === tab
+                activeTab === t.id
                   ? 'bg-accent/20 text-accent border border-accent/30'
                   : 'bg-surface-card/50 text-text-muted border border-surface-border/30'
               }`}
             >
-              {tab === 'mejoras' ? '🔧 Mejoras' : '📖 Legado'}
+              {t.icon} {t.id === 'escribir' ? 'Escribir' : t.id === 'mejoras' ? 'Mejoras' : 'Legado'}
             </button>
           ))}
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {activeTab === 'mejoras' && <UpgradesPanel data={data} onBuy={onBuyUpgrade} />}
-          {activeTab === 'legado' && (
-            <PrestigePanel
-              data={data}
-              onPrestige={onPrestige}
-              onOpenLegacyTree={() => setShowLegacyTree(true)}
-            />
-          )}
-        </div>
+        {/* Panel content (only when not on escribir tab) */}
+        {activeTab !== 'escribir' && (
+          <div className="max-h-[35vh] overflow-y-auto">
+            {activeTab === 'mejoras' && <UpgradesPanel data={data} onBuy={onBuyUpgrade} />}
+            {activeTab === 'legado' && (
+              <PrestigePanel
+                data={data}
+                onPrestige={onPrestige}
+                onOpenLegacyTree={() => setShowLegacyTree(true)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {showLegacyTree && (
