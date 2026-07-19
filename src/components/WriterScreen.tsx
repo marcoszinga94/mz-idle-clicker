@@ -70,10 +70,12 @@ export default function WriterScreen({ data, onFrase, onError, extraClass = '' }
     setShowPop(true);
     setJustCompleted(true);
     onFrase(frase);
+    inputRef.current?.focus();
     setTimeout(() => {
       setShowPop(false);
       setJustCompleted(false);
       completedRef.current = false;
+      inputRef.current?.focus();
     }, 400);
   }, [onFrase]);
 
@@ -195,7 +197,6 @@ export default function WriterScreen({ data, onFrase, onError, extraClass = '' }
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            readOnly={justCompleted}
           />
         </div>
       </div>
